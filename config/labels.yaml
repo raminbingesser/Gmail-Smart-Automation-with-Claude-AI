@@ -3,19 +3,25 @@
 
 labels:
   - name: IMPORTANT
-    description: "Dringende/wichtige Emails"
+    description: "Dringende/wichtige Emails, Action Required, Zeitkritisch"
+    keywords: ["urgent", "asap", "wichtig", "action required", "dringend"]
 
   - name: EmailAuto_Newsletter
-    description: "Marketing, Subscriptions, Digests"
+    description: "Marketing, Subscriptions, Digests, Periodische Updates"
+    keywords: ["newsletter", "subscription", "unsubscribe", "digest", "weekly", "monthly"]
 
   - name: EmailAuto_Invoice
-    description: "Invoices, Payments, Transaktionen"
+    description: "Rechnungen, Payments, Transaktionen, Quittungen"
+    keywords: ["invoice", "payment", "rechnung", "quittung", "receipt", "transaction", "betrag"]
 
   - name: EmailAuto_Work
-    description: "Work-related Emails"
+    description: "Geschäftliche Emails, Meetings, Projekte, Team-Kommunikation"
+    keywords: ["meeting", "project", "deadline", "team", "business", "arbeit", "besprechung"]
 
   - name: SPAM
-    description: "Potentiell Spam/Junk"
+    description: "Spam, Junk, Unerwünschte Emails"
+    keywords: ["spam", "unsubscribe", "viagra", "lottery", "nigerian prince"]
 
   - name: CATEGORY_PERSONAL
-    description: "Friends, Familie, Soziales"
+    description: "Private Emails, Friends, Familie, Persönliche Nachrichten"
+    keywords: ["friend", "family", "personal", "love", "hope you", "freund", "familie"]
