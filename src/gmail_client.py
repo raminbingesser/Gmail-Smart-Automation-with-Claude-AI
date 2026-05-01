@@ -168,3 +168,39 @@ class GmailClient:
         ).execute()
 
         return True
+
+    def delete_spam_folder(self) -> int:
+        """Verschiebt ALLE Emails im Gmail SPAM-Ordner in den Papierkorb.
+
+        ACHTUNG: Nur Gmail-Systemordner 'SPAM'. Keine anderen Emails werden berührt.
+        Emails landen im Papierkorb (nach 30 Tagen auto-gelöscht).
+        """
+        if not self.service:
+            self.get_service()
+
+        deleted_count = 0
+        page_token = None
+
+        while True:
+            result = self.service.users().messages().list(
+                userId="me",
+                q="in:spam",
+                maxResults=500,
+                pageToken=page_token
+            ).execute()
+
+            messages = result.get("messages", [])
+            if not messages:
+                break
+
+            for msg in messages:
+                self.service.users().messages().trash(
+                    userId="me", id=msg["id"]
+                ).execute()
+                deleted_count += 1
+
+            page_token = result.get("nextPageToken")
+            if not page_token:
+                break
+
+        return deleted_count

@@ -2,7 +2,7 @@
 # Tägliche Email-Klassifikation
 # Wird täglich um 8 Uhr morgens ausgeführt (via launchd)
 
-PROJECT_DIR="/Users/raminbingesser/projects/EmailAutomationPrivat"
+PROJECT_DIR="/Users/raminbingesser/Projects/EmailAutomationPrivat"
 LOG_FILE="$PROJECT_DIR/logs/automation.log"
 
 # Logs-Ordner erstellen falls nicht vorhanden
@@ -19,9 +19,19 @@ source .venv/bin/activate
 python src/main.py >> "$LOG_FILE" 2>&1
 
 if [ $? -eq 0 ]; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') — ✅ Success" >> "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ✅ Classification success" >> "$LOG_FILE"
 else
-    echo "$(date '+%Y-%m-%d %H:%M:%S') — ❌ Error occurred" >> "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ❌ Classification error" >> "$LOG_FILE"
+fi
+
+# SPAM-Bereinigung
+echo "$(date '+%Y-%m-%d %H:%M:%S') — Starting spam cleanup (ONLY Gmail SPAM folder)" >> "$LOG_FILE"
+python src/purge_spam.py >> "$LOG_FILE" 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ✅ Spam cleanup success" >> "$LOG_FILE"
+else
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ❌ Spam cleanup error" >> "$LOG_FILE"
 fi
 
 echo "" >> "$LOG_FILE"
