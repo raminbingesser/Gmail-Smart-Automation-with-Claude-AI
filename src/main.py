@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from gmail_client import GmailClient
 from classifier import EmailClassifier
+from calendar_client import create_event
 
 
 def load_labels() -> list[str]:
@@ -62,6 +63,7 @@ def main():
     for result in results:
         email_id = result["email_id"]
         subject = result["subject"]
+        body = result.get("body", "")
         classification = result["classification"]
         label = classification["label"]
         confidence = classification["confidence"]
@@ -75,9 +77,34 @@ def main():
         try:
             gmail.apply_label(email_id, label)
             gmail.mark_as_read(email_id)
-            print(f"   ✅ Gelabelt + als gelesen markiert\n")
+            print(f"   ✅ Gelabelt + als gelesen markiert")
+
+            # Priority Detection: Stern setzen wenn Antwort gebraucht
+            if label not in ["Newsletter", "Invoice"]:
+                if classifier.needs_reply(subject, body):
+                    gmail.star_email(email_id)
+                    print(f"   ⭐ Braucht Antwort — gestarrt")
+
+            # Health → Calendar: Termin extrahieren + in Kalender eintragen
+            if label == "Health":
+                appointment = classifier.extract_appointment(subject, body)
+                if appointment:
+                    success = create_event(
+                        title=appointment.get("titel", subject[:30]),
+                        date_str=appointment["datum"],
+                        time_str=appointment["uhrzeit"],
+                        duration_min=appointment.get("dauer_min", 60),
+                        location=appointment.get("ort", ""),
+                        calendar="Privat"
+                    )
+                    if success:
+                        print(f"   📅 Termin → Apple Calendar")
+                    else:
+                        print(f"   ⚠️  Termin konnte nicht hinzugefügt werden")
+
+            print()
         except Exception as e:
-            print(f"   ❌ Fehler beim Labeln: {e}\n")
+            print(f"   ❌ Fehler: {e}\n")
 
 
 if __name__ == "__main__":

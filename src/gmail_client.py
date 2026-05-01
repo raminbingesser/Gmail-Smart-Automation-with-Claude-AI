@@ -217,6 +217,19 @@ class GmailClient:
 
         return removed_count
 
+    def star_email(self, email_id: str) -> bool:
+        """Setzt Gmail-Stern auf Email."""
+        if not self.service:
+            self.get_service()
+
+        self.service.users().messages().modify(
+            userId="me",
+            id=email_id,
+            body={"addLabelIds": ["STARRED"]}
+        ).execute()
+
+        return True
+
     def delete_spam_folder(self) -> int:
         """Verschiebt ALLE Emails im Gmail SPAM-Ordner in den Papierkorb.
 

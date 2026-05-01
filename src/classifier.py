@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Optional
+from typing import Optional, Union
 from anthropic import Anthropic
 
 
@@ -73,6 +73,74 @@ Beispiel Output:
                 "reason": "Claude returned invalid JSON",
             }
 
+    def extract_appointment(self, subject: str, body: str) -> Optional[dict]:
+        """Extrahiert Termin-Daten aus Email.
+
+        Returns:
+            {titel, datum, uhrzeit, dauer_min, ort} oder None
+        """
+        prompt = f"""Extrahiere den Termin aus dieser Email. Antworte mit JSON oder "NULL" falls kein Termin.
+
+Subject: {subject}
+Body: {body[:500]}
+
+Format (Swiss German Locale - DD.MM.YYYY):
+{{"titel":"Zahnarzttermin","datum":"15.05.2026","uhrzeit":"14:30","dauer_min":30,"ort":"Zahnarzt Dr. Schmidt"}}
+
+Nur pures JSON, kein Markdown, kein ```json```.
+Falls KEIN Termin erkennbar: antworte mit: NULL"""
+
+        message = self.client.messages.create(
+            model=self.model,
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        response_text = message.content[0].text.strip()
+
+        if response_text == "NULL" or "null" in response_text.lower():
+            return None
+
+        try:
+            result = json.loads(response_text)
+            return {
+                "titel": result.get("titel", ""),
+                "datum": result.get("datum", ""),
+                "uhrzeit": result.get("uhrzeit", ""),
+                "dauer_min": int(result.get("dauer_min", 60)),
+                "ort": result.get("ort", ""),
+            }
+        except (json.JSONDecodeError, ValueError, TypeError):
+            return None
+
+    def needs_reply(self, subject: str, body: str) -> bool:
+        """Entscheidet, ob Email eine Antwort braucht."""
+        prompt = f"""Braucht diese Email eine Antwort oder Handlung? Antworte nur mit "JA" oder "NEIN".
+
+Subject: {subject}
+Body: {body[:300]}
+
+Beispiele für JA:
+- "Kannst du mir bitte helfen?"
+- "Wann hast du Zeit?"
+- "Action required: ..."
+- "Bitte antworte bis Freitag"
+
+Beispiele für NEIN:
+- Newsletter / Marketing
+- Rechnungen / Bestätigungen
+- Automatische Benachrichtigungen
+- Informative Mails ohne Frage"""
+
+        message = self.client.messages.create(
+            model=self.model,
+            max_tokens=10,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        response = message.content[0].text.strip().upper()
+        return "JA" in response
+
     def batch_classify(
         self, emails: list[dict], labels: list[str]
     ) -> list[dict]:
@@ -86,6 +154,7 @@ Beispiel Output:
                 {
                     "email_id": email["id"],
                     "subject": email["subject"],
+                    "body": email["body"],
                     "classification": classification,
                 }
             )
