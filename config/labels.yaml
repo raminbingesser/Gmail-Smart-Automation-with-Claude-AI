@@ -1,0 +1,21 @@
+# Label-Konfiguration für Email-Klassifikation
+# Jedes Label kann später verfeinert werden mit Keywords
+
+labels:
+  - name: Wichtig
+    description: "Dringende/wichtige Emails"
+
+  - name: Newsletter
+    description: "Marketing, Subscriptions, Digests"
+
+  - name: Rechnung
+    description: "Invoices, Payments, Transaktionen"
+
+  - name: Arbeit
+    description: "Work-related Emails"
+
+  - name: Spam-Kandidat
+    description: "Potentiell Spam/Junk"
+
+  - name: Sozial
+    description: "Friends, Familie, Soziales"
