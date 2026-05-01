@@ -47,9 +47,9 @@ def main():
     gmail.get_service()
     print("✅ Verbunden mit Gmail\n")
 
-    # Emails holen (neueste, gelesen + ungelesen)
-    print(f"📧 Lese {emails_per_run} neueste Emails (gelesen + ungelesen)...")
-    emails = gmail.fetch_recent_emails(limit=emails_per_run)
+    # Emails holen (nur letzte 24h, gelesen + ungelesen)
+    print(f"📧 Lese Emails der letzten 24h (gelesen + ungelesen)...")
+    emails = gmail.fetch_recent_emails(limit=emails_per_run, query="newer_than:1d")
 
     if not emails:
         print("   Keine ungelesenen Emails gefunden.")
@@ -79,8 +79,8 @@ def main():
             gmail.mark_as_read(email_id)
             print(f"   ✅ Gelabelt + als gelesen markiert")
 
-            # Priority Detection: Stern setzen wenn Antwort gebraucht
-            if label not in ["Newsletter", "Invoice"]:
+            # Priority Detection: Stern setzen wenn Antwort gebraucht (nur bei General)
+            if label == "General":
                 if classifier.needs_reply(subject, body):
                     gmail.star_email(email_id)
                     print(f"   ⭐ Braucht Antwort — gestarrt")
