@@ -1,19 +1,23 @@
 # Label-Konfiguration für Email-Klassifikation
-# Nutzt Gmail Custom Labels mit EmailAuto_ Präfix
+# Nutzt Gmail Custom Labels ohne Präfix
 
 labels:
-  - name: EmailAuto_Newsletter
+  - name: Newsletter
     description: "Marketing, Subscriptions, Digests, Periodische Updates"
     keywords: ["newsletter", "subscription", "unsubscribe", "digest", "weekly", "monthly", "abo", "subscribe", "alert", "beachten"]
 
-  - name: EmailAuto_Invoice
+  - name: Invoice
     description: "Rechnungen, Payments, Transaktionen, Quittungen"
     keywords: ["invoice", "payment", "rechnung", "quittung", "receipt", "transaction", "betrag", "bestellung", "auftrag", "order", "versand", "shipping", "chf", "€", "rechnungsno", "auftragsno"]
 
-  - name: EmailAuto_Work
-    description: "Geschäftliche Emails, Meetings, Projekte, Team-Kommunikation"
-    keywords: ["meeting", "project", "deadline", "team", "business", "arbeit", "besprechung", "anfrage", "ticket", "case", "support", "angebot"]
+  - name: General
+    description: "Anfragen, Tickets, Support, Angebote, Sonstige Geschäftskommunikation"
+    keywords: ["anfrage", "ticket", "case", "support", "angebot", "inquiry", "request", "frage"]
 
-  - name: EmailAuto_Steuern
+  - name: Tax
     description: "Steuererklärung, Steuerbescheinigung, AHV, IV, BVG, Vorsorge, Lohnausweis"
     keywords: ["steuern", "tax", "steuerbescheinigung", "lohnausweis", "ahv", "iv", "bvg", "vorsorge", "einkommensteuererklärung", "dekl", "eis"]
+
+  - name: Health
+    description: "Gesundheit, Arztbesuche, Medizin, Zahnärzte, Kliniken, Rezepte"
+    keywords: ["arzt", "med", "doctor", "patient", "appointment", "termin", "zahnarzt", "hausarzt", "klinik", "krankenhaus", "rezept", "medikament", "lab", "bluttest", "diagnose", "gesundheit", "therapie", "ärztlich", "untersuchung"]

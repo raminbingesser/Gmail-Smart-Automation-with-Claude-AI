@@ -19,7 +19,7 @@ def main():
     print("🧹 Cleanup: Entferne alte Labels...\n")
     gmail.get_service()
 
-    old_labels = ["IMPORTANT", "SPAM", "CATEGORY_PERSONAL"]
+    old_labels = ["EmailAuto_Newsletter", "EmailAuto_Invoice", "EmailAuto_Work", "EmailAuto_Steuern"]
 
     for label_name in old_labels:
         count = gmail.remove_label_by_name(label_name)
