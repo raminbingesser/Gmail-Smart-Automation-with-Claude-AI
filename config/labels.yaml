@@ -1,27 +1,19 @@
 # Label-Konfiguration für Email-Klassifikation
-# Nutzt Gmail System-Labels + Custom Labels mit Underscores
+# Nutzt Gmail Custom Labels mit EmailAuto_ Präfix
 
 labels:
-  - name: IMPORTANT
-    description: "Dringende/wichtige Emails, Action Required, Zeitkritisch"
-    keywords: ["urgent", "asap", "wichtig", "action required", "dringend"]
-
   - name: EmailAuto_Newsletter
     description: "Marketing, Subscriptions, Digests, Periodische Updates"
-    keywords: ["newsletter", "subscription", "unsubscribe", "digest", "weekly", "monthly"]
+    keywords: ["newsletter", "subscription", "unsubscribe", "digest", "weekly", "monthly", "abo", "subscribe", "alert", "beachten"]
 
   - name: EmailAuto_Invoice
     description: "Rechnungen, Payments, Transaktionen, Quittungen"
-    keywords: ["invoice", "payment", "rechnung", "quittung", "receipt", "transaction", "betrag"]
+    keywords: ["invoice", "payment", "rechnung", "quittung", "receipt", "transaction", "betrag", "bestellung", "auftrag", "order", "versand", "shipping", "chf", "€", "rechnungsno", "auftragsno"]
 
   - name: EmailAuto_Work
     description: "Geschäftliche Emails, Meetings, Projekte, Team-Kommunikation"
-    keywords: ["meeting", "project", "deadline", "team", "business", "arbeit", "besprechung"]
+    keywords: ["meeting", "project", "deadline", "team", "business", "arbeit", "besprechung", "anfrage", "ticket", "case", "support", "angebot"]
 
-  - name: SPAM
-    description: "Spam, Junk, Unerwünschte Emails"
-    keywords: ["spam", "unsubscribe", "viagra", "lottery", "nigerian prince"]
-
-  - name: CATEGORY_PERSONAL
-    description: "Private Emails, Friends, Familie, Persönliche Nachrichten"
-    keywords: ["friend", "family", "personal", "love", "hope you", "freund", "familie"]
+  - name: EmailAuto_Steuern
+    description: "Steuererklärung, Steuerbescheinigung, AHV, IV, BVG, Vorsorge, Lohnausweis"
+    keywords: ["steuern", "tax", "steuerbescheinigung", "lohnausweis", "ahv", "iv", "bvg", "vorsorge", "einkommensteuererklärung", "dekl", "eis"]

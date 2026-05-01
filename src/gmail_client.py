@@ -169,6 +169,54 @@ class GmailClient:
 
         return True
 
+    def remove_label_by_name(self, label_name: str) -> int:
+        """Entfernt ein Label von ALLEN Mails, die es haben.
+
+        ACHTUNG: Alle Mails mit diesem Label werden delabelt (nicht gelöscht).
+        """
+        if not self.service:
+            self.get_service()
+
+        removed_count = 0
+        page_token = None
+
+        # Finde Label-ID
+        labels_result = self.service.users().labels().list(userId="me").execute()
+        labels = labels_result.get("labels", [])
+        label_id = next((l["id"] for l in labels if l["name"] == label_name), None)
+
+        if not label_id:
+            print(f"   ℹ️  Label '{label_name}' nicht gefunden.")
+            return 0
+
+        # Finde alle Mails mit diesem Label
+        while True:
+            result = self.service.users().messages().list(
+                userId="me",
+                labelIds=[label_id],
+                maxResults=500,
+                pageToken=page_token
+            ).execute()
+
+            messages = result.get("messages", [])
+            if not messages:
+                break
+
+            # Entferne Label von jeder Mail
+            for msg in messages:
+                self.service.users().messages().modify(
+                    userId="me",
+                    id=msg["id"],
+                    body={"removeLabelIds": [label_id]}
+                ).execute()
+                removed_count += 1
+
+            page_token = result.get("nextPageToken")
+            if not page_token:
+                break
+
+        return removed_count
+
     def delete_spam_folder(self) -> int:
         """Verschiebt ALLE Emails im Gmail SPAM-Ordner in den Papierkorb.
 
