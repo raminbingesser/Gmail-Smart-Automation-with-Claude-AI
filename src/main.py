@@ -79,8 +79,8 @@ def main():
             gmail.mark_as_read(email_id)
             print(f"   ✅ Gelabelt + als gelesen markiert")
 
-            # Priority Detection: Stern setzen wenn Antwort gebraucht (nur bei General)
-            if label == "General":
+            # Priority Detection: Stern setzen wenn Antwort gebraucht (alle außer Newsletter + Invoice)
+            if label not in ["Newsletter", "Invoice"]:
                 if classifier.needs_reply(subject, body):
                     gmail.star_email(email_id)
                     print(f"   ⭐ Braucht Antwort — gestarrt")
