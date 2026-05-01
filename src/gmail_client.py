@@ -55,14 +55,14 @@ class GmailClient:
         self.service = build("gmail", "v1", credentials=creds)
         return self.service
 
-    def fetch_unread_emails(self, limit: int = 5) -> list[dict]:
-        """Hole N ungelesene Emails (ID, Subject, Body)."""
+    def fetch_recent_emails(self, limit: int = 20) -> list[dict]:
+        """Hole N neueste Emails (gelesen + ungelesen)."""
         if not self.service:
             self.get_service()
 
-        # Query: unread messages
+        # Query: alle Emails (neueste zuerst), nicht nur unread
         results = self.service.users().messages().list(
-            userId="me", q="is:unread", maxResults=limit
+            userId="me", maxResults=limit
         ).execute()
 
         messages = results.get("messages", [])

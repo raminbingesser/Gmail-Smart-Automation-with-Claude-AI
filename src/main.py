@@ -46,9 +46,9 @@ def main():
     gmail.get_service()
     print("✅ Verbunden mit Gmail\n")
 
-    # Emails holen
-    print(f"📧 Lese {emails_per_run} ungelesene Emails...")
-    emails = gmail.fetch_unread_emails(limit=emails_per_run)
+    # Emails holen (neueste, gelesen + ungelesen)
+    print(f"📧 Lese {emails_per_run} neueste Emails (gelesen + ungelesen)...")
+    emails = gmail.fetch_recent_emails(limit=emails_per_run)
 
     if not emails:
         print("   Keine ungelesenen Emails gefunden.")
