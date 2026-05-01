@@ -16,54 +16,61 @@ class EmailClassifier:
     def classify_email(
         self, subject: str, body: str, labels: list[str]
     ) -> dict:
-        """
-        Klassifiziere Email mit Claude.
+        """Klassifiziere Email mit Claude."""
+        labels_str = ", ".join(labels)
 
-        Returns:
-            {
-                "label": "Newsletter",
-                "confidence": 0.92,
-                "reason": "Enthält 'unsubscribe' und typische Newsletter-Struktur"
-            }
-        """
-        labels_str = "\n".join([f"{i+1}. {l}" for i, l in enumerate(labels)])
+        prompt = f"""Klassifiziere diese Email streng nach Labels. Antworte EXAKT mit diesem JSON Format:
+{{"label":"LABELNAME","confidence":0.95,"reason":"Kurze Begründung"}}
 
-        prompt = f"""Klassifiziere diese Email. ANTWORTE NUR mit JSON, keine anderen Worte.
+Labels: {labels_str}
 
-Labels ({len(labels)}):
-{labels_str}
-
-Email Subject: {subject}
-Email Body: {body[:500]}
-
-Antworte exakt mit:
-{{"label": "LABEL_NAME", "confidence": NUMBER, "reason": "TEXT"}}
+Subject: {subject}
+Body: {body[:300]}
 
 Regeln:
-- label: exakt ein Label von oben
-- confidence: 0.0 bis 1.0
-- reason: 1-2 Sätze
-- NUR JSON, keine weiteren Worte!"""
+- Wähle GENAU ein Label
+- confidence: 0.0-1.0 (als Dezimalzahl)
+- reason: 1 Satz max
+- Antwort: NUR das JSON Objekt, keine Worte davor oder danach!
+- Kein Markdown, kein ```json```, nur pures JSON!
+
+Beispiel Output:
+{{"label":"Invoice","confidence":0.92,"reason":"Enthält Rechnung und Betrag"}}"""
 
         message = self.client.messages.create(
             model=self.model,
-            max_tokens=150,
+            max_tokens=100,
             messages=[{"role": "user", "content": prompt}],
         )
 
         response_text = message.content[0].text.strip()
+
+        # Versuche JSON zu parsen (mit cleanup)
         try:
+            # Entferne Markdown-Code-Blöcke falls vorhanden
+            if response_text.startswith("```"):
+                response_text = response_text.split("```")[1]
+                if response_text.startswith("json"):
+                    response_text = response_text[4:]
+
             result = json.loads(response_text)
+            label = result.get("label", labels[0])
+
+            # Validate dass label in der liste ist
+            if label not in labels:
+                label = labels[0]
+
             return {
-                "label": result.get("label", labels[0]),
+                "label": label,
                 "confidence": float(result.get("confidence", 0.5)),
                 "reason": result.get("reason", ""),
             }
-        except (json.JSONDecodeError, ValueError, KeyError):
+        except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
+            print(f"   DEBUG: JSON Parse Error: {e}, Response: {response_text[:100]}")
             return {
                 "label": labels[0],
                 "confidence": 0.5,
-                "reason": "Automatisch klassifiziert",
+                "reason": "Claude returned invalid JSON",
             }
 
     def batch_classify(
