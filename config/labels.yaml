@@ -1,21 +1,21 @@
 # Label-Konfiguration für Email-Klassifikation
-# Jedes Label kann später verfeinert werden mit Keywords
+# Nutzt Gmail System-Labels + Custom Labels mit Underscores
 
 labels:
-  - name: Wichtig
+  - name: IMPORTANT
     description: "Dringende/wichtige Emails"
 
-  - name: Newsletter
+  - name: EmailAuto_Newsletter
     description: "Marketing, Subscriptions, Digests"
 
-  - name: Rechnung
+  - name: EmailAuto_Invoice
     description: "Invoices, Payments, Transaktionen"
 
-  - name: Arbeit
+  - name: EmailAuto_Work
     description: "Work-related Emails"
 
-  - name: Spam-Kandidat
+  - name: SPAM
     description: "Potentiell Spam/Junk"
 
-  - name: Sozial
+  - name: CATEGORY_PERSONAL
     description: "Friends, Familie, Soziales"

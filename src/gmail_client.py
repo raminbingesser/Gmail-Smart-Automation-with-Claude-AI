@@ -46,7 +46,7 @@ class GmailClient:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_path, GMAIL_SCOPES
                 )
-                creds = flow.run_local_server(port=0)
+                creds = flow.run_local_server(port=8080)
 
             # Token speichern für nächsten Lauf
             with open(self.token_path, "w") as token:
@@ -112,42 +112,49 @@ class GmailClient:
         return emails
 
     def apply_label(self, email_id: str, label_name: str) -> bool:
-        """Wende ein Label auf eine Email an."""
+        """Wende ein Label auf eine Email an (nutzt System + Custom Labels)."""
         if not self.service:
             self.get_service()
 
-        # Label ID suchen oder erstellen
+        label_name = label_name.strip() if label_name else "Work"
+
         labels_result = (
             self.service.users().labels().list(userId="me").execute()
         )
         labels = labels_result.get("labels", [])
+
         label_id = next(
             (l["id"] for l in labels if l["name"] == label_name), None
         )
 
         if not label_id:
-            # Label erstellen
-            label_body = {
-                "name": label_name,
-                "labelListVisibility": "labelShow",
-                "messageListVisibility": "show",
-            }
-            created_label = (
-                self.service.users()
-                .labels()
-                .create(userId="me", body=label_body)
-                .execute()
-            )
-            label_id = created_label["id"]
+            try:
+                label_body = {
+                    "name": label_name,
+                    "labelListVisibility": "labelShow",
+                    "messageListVisibility": "show",
+                }
+                created_label = (
+                    self.service.users()
+                    .labels()
+                    .create(userId="me", body=label_body)
+                    .execute()
+                )
+                label_id = created_label["id"]
+            except Exception as e:
+                print(f"   ⚠️  Label erstellen fehlgeschlagen: {e}")
+                return False
 
-        # Label zur Email hinzufügen
-        self.service.users().messages().modify(
-            userId="me",
-            id=email_id,
-            body={"addLabelIds": [label_id]},
-        ).execute()
-
-        return True
+        try:
+            self.service.users().messages().modify(
+                userId="me",
+                id=email_id,
+                body={"addLabelIds": [label_id]},
+            ).execute()
+            return True
+        except Exception as e:
+            print(f"   ⚠️  Fehler beim Labeln: {e}")
+            return False
 
     def mark_as_read(self, email_id: str) -> bool:
         """Markiere Email als gelesen."""

@@ -26,50 +26,44 @@ class EmailClassifier:
                 "reason": "Enthält 'unsubscribe' und typische Newsletter-Struktur"
             }
         """
-        labels_str = "\n".join([f"- {l}" for l in labels])
+        labels_str = "\n".join([f"{i+1}. {l}" for i, l in enumerate(labels)])
 
-        prompt = f"""Du bist ein Email-Klassifikations-Expert. Analysiere diese Email und ordne sie einem Label zu.
+        prompt = f"""Klassifiziere diese Email. ANTWORTE NUR mit JSON, keine anderen Worte.
 
-LABELS ZUR AUSWAHL:
+Labels ({len(labels)}):
 {labels_str}
 
-EMAIL:
-Subject: {subject}
-Body: {body[:1000]}
+Email Subject: {subject}
+Email Body: {body[:500]}
 
-ANTWORT (JSON):
-{{
-  "label": "...",
-  "confidence": 0.0-1.0,
-  "reason": "kurze Begründung"
-}}
+Antworte exakt mit:
+{{"label": "LABEL_NAME", "confidence": NUMBER, "reason": "TEXT"}}
 
-Wichtig:
-- Wähle GENAU eines der Labels
-- confidence: 0.0 = keine Sicherheit, 1.0 = absolut sicher
-- Sei präzise und praktisch (kein Over-Engineering)"""
+Regeln:
+- label: exakt ein Label von oben
+- confidence: 0.0 bis 1.0
+- reason: 1-2 Sätze
+- NUR JSON, keine weiteren Worte!"""
 
         message = self.client.messages.create(
             model=self.model,
-            max_tokens=256,
+            max_tokens=150,
             messages=[{"role": "user", "content": prompt}],
         )
 
-        # Response parsen
-        response_text = message.content[0].text
+        response_text = message.content[0].text.strip()
         try:
             result = json.loads(response_text)
             return {
-                "label": result.get("label"),
-                "confidence": result.get("confidence", 0.0),
+                "label": result.get("label", labels[0]),
+                "confidence": float(result.get("confidence", 0.5)),
                 "reason": result.get("reason", ""),
             }
-        except json.JSONDecodeError:
-            # Fallback wenn JSON parsing fehlschlägt
+        except (json.JSONDecodeError, ValueError, KeyError):
             return {
                 "label": labels[0],
                 "confidence": 0.5,
-                "reason": "Klassifikation unsicher (JSON Parse Error)",
+                "reason": "Automatisch klassifiziert",
             }
 
     def batch_classify(
