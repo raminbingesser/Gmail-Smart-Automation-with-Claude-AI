@@ -5,6 +5,10 @@ SICHERHEITSREGEL: Dieses Script löscht AUSSCHLIESSLICH Emails aus dem Gmail-Sys
 """
 
 import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+import reporter
 from dotenv import load_dotenv
 from gmail_client import GmailClient
 
@@ -25,6 +29,11 @@ def main():
 
     count = gmail.delete_spam_folder()
     print(f"✅ {count} Spam-Email(s) in den Papierkorb verschoben.")
+
+    try:
+        reporter.save_spam_snapshot(count)
+    except Exception as e:
+        print(f"⚠️  Spam-Stats konnten nicht gespeichert werden: {e}")
 
 
 if __name__ == "__main__":
