@@ -1,0 +1,76 @@
+"""Tests für reporter.py — Datenfunktionen."""
+
+import json
+import sys
+from pathlib import Path
+from datetime import date
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import pytest
+from src.reporter import save_snapshot, save_spam_snapshot, load_history
+
+
+SAMPLE_STATS = {
+    "date": "2026-05-02",
+    "timestamp": "2026-05-02T08:03:45",
+    "total_processed": 23,
+    "label_counts": {"Newsletter": 8, "Invoice": 3, "General": 7, "Tax": 2, "Health": 3},
+    "priority_emails": [{"from": "arzt@praxis.ch", "subject": "Ihr Termin", "time": "08:01"}],
+    "calendar_events": [{"title": "Zahnarzt", "date": "15.05.2026", "time": "10:00"}],
+    "api_cost_chf": 0.0008,
+    "runtime_seconds": 45.2,
+    "errors": [],
+}
+
+
+def test_save_snapshot_creates_json_file(tmp_path):
+    save_snapshot(SAMPLE_STATS, data_dir=tmp_path)
+    expected = tmp_path / "2026-05-02.json"
+    assert expected.exists()
+
+
+def test_save_snapshot_content_is_correct(tmp_path):
+    save_snapshot(SAMPLE_STATS, data_dir=tmp_path)
+    data = json.loads((tmp_path / "2026-05-02.json").read_text())
+    assert data["total_processed"] == 23
+    assert data["label_counts"]["Newsletter"] == 8
+    assert len(data["priority_emails"]) == 1
+
+
+def test_save_snapshot_creates_missing_directory(tmp_path):
+    target = tmp_path / "deep" / "nested"
+    save_snapshot(SAMPLE_STATS, data_dir=target)
+    assert (target / "2026-05-02.json").exists()
+
+
+def test_save_spam_snapshot_creates_file(tmp_path):
+    save_spam_snapshot(12, data_dir=tmp_path, today="2026-05-02")
+    expected = tmp_path / "2026-05-02-spam.json"
+    assert expected.exists()
+    data = json.loads(expected.read_text())
+    assert data["deleted"] == 12
+
+
+def test_load_history_returns_sorted_list(tmp_path):
+    for day, count in [("2026-05-01", 10), ("2026-05-02", 23), ("2026-04-30", 5)]:
+        stats = {**SAMPLE_STATS, "date": day, "total_processed": count}
+        save_snapshot(stats, data_dir=tmp_path)
+
+    history = load_history(days=30, data_dir=tmp_path)
+    assert len(history) == 3
+    assert history[0]["date"] == "2026-04-30"
+    assert history[-1]["date"] == "2026-05-02"
+
+
+def test_load_history_ignores_spam_files(tmp_path):
+    save_snapshot(SAMPLE_STATS, data_dir=tmp_path)
+    save_spam_snapshot(5, data_dir=tmp_path, today="2026-05-02")
+
+    history = load_history(days=30, data_dir=tmp_path)
+    assert len(history) == 1
+
+
+def test_load_history_empty_when_no_files(tmp_path):
+    history = load_history(days=30, data_dir=tmp_path)
+    assert history == []
