@@ -12,6 +12,15 @@ class EmailClassifier:
     def __init__(self, model: str = "claude-3-5-haiku-20241022"):
         self.model = model
         self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        self._total_input_tokens = 0
+        self._total_output_tokens = 0
+
+    def total_cost_chf(self) -> float:
+        """Berechne Gesamtkosten aller bisherigen API-Aufrufe in CHF."""
+        INPUT_COST_CHF = 0.80 * 0.90 / 1_000_000
+        OUTPUT_COST_CHF = 4.00 * 0.90 / 1_000_000
+        return (self._total_input_tokens * INPUT_COST_CHF +
+                self._total_output_tokens * OUTPUT_COST_CHF)
 
     def classify_email(
         self, subject: str, body: str, labels: list[str]
@@ -42,6 +51,9 @@ Beispiel Output:
             max_tokens=100,
             messages=[{"role": "user", "content": prompt}],
         )
+
+        self._total_input_tokens += message.usage.input_tokens
+        self._total_output_tokens += message.usage.output_tokens
 
         response_text = message.content[0].text.strip()
 
@@ -96,6 +108,9 @@ Falls KEIN Termin erkennbar: antworte mit: NULL"""
             messages=[{"role": "user", "content": prompt}],
         )
 
+        self._total_input_tokens += message.usage.input_tokens
+        self._total_output_tokens += message.usage.output_tokens
+
         response_text = message.content[0].text.strip()
 
         if response_text == "NULL" or "null" in response_text.lower():
@@ -137,6 +152,9 @@ Beispiele für NEIN:
             max_tokens=10,
             messages=[{"role": "user", "content": prompt}],
         )
+
+        self._total_input_tokens += message.usage.input_tokens
+        self._total_output_tokens += message.usage.output_tokens
 
         response = message.content[0].text.strip().upper()
         return "JA" in response

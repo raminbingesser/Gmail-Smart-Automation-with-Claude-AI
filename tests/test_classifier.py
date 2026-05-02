@@ -14,25 +14,22 @@ from src.classifier import EmailClassifier
 @pytest.fixture
 def classifier():
     """Teste Classifier ohne echte API-Aufrufe."""
-    return EmailClassifier()
+    with patch("src.classifier.Anthropic"):
+        return EmailClassifier()
 
 
-@patch("src.classifier.Anthropic")
-def test_classify_email_newsletter(mock_anthropic_class, classifier):
+def test_classify_email_newsletter(classifier):
     """Test: Newsletter werden erkannt."""
-    # Mock Claude API Response
-    mock_client = MagicMock()
-    mock_anthropic_class.return_value = mock_client
-
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
             text='{"label": "Newsletter", "confidence": 0.95, "reason": "Enthält Unsubscribe-Link"}'
         )
     ]
-    mock_client.messages.create.return_value = mock_response
+    mock_response.usage.input_tokens = 50
+    mock_response.usage.output_tokens = 20
+    classifier.client.messages.create.return_value = mock_response
 
-    # Test
     result = classifier.classify_email(
         subject="Weekly Newsletter #42",
         body="Hi there, here's our weekly digest...",
@@ -44,19 +41,17 @@ def test_classify_email_newsletter(mock_anthropic_class, classifier):
     assert "Unsubscribe" in result["reason"]
 
 
-@patch("src.classifier.Anthropic")
-def test_classify_email_invoice(mock_anthropic_class, classifier):
+def test_classify_email_invoice(classifier):
     """Test: Rechnungen werden erkannt."""
-    mock_client = MagicMock()
-    mock_anthropic_class.return_value = mock_client
-
     mock_response = MagicMock()
     mock_response.content = [
         MagicMock(
             text='{"label": "Rechnung", "confidence": 0.99, "reason": "Enthält Rechnungsnummer und Betrag"}'
         )
     ]
-    mock_client.messages.create.return_value = mock_response
+    mock_response.usage.input_tokens = 50
+    mock_response.usage.output_tokens = 20
+    classifier.client.messages.create.return_value = mock_response
 
     result = classifier.classify_email(
         subject="Invoice #2024-001",
@@ -68,16 +63,13 @@ def test_classify_email_invoice(mock_anthropic_class, classifier):
     assert result["confidence"] == 0.99
 
 
-@patch("src.classifier.Anthropic")
-def test_classify_email_malformed_json(mock_anthropic_class, classifier):
+def test_classify_email_malformed_json(classifier):
     """Test: Fehlerbehandlung bei JSON-Parse Error."""
-    mock_client = MagicMock()
-    mock_anthropic_class.return_value = mock_client
-
-    # Keine gültiges JSON
     mock_response = MagicMock()
     mock_response.content = [MagicMock(text="Das ist kein JSON")]
-    mock_client.messages.create.return_value = mock_response
+    mock_response.usage.input_tokens = 50
+    mock_response.usage.output_tokens = 20
+    classifier.client.messages.create.return_value = mock_response
 
     result = classifier.classify_email(
         subject="Broken Response",
@@ -88,7 +80,7 @@ def test_classify_email_malformed_json(mock_anthropic_class, classifier):
     # Fallback: erstes Label
     assert result["label"] == "Label1"
     assert result["confidence"] == 0.5
-    assert "unsicher" in result["reason"].lower()
+    assert result["reason"] == "Claude returned invalid JSON"
 
 
 def test_batch_classify():
