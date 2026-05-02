@@ -34,4 +34,14 @@ else
     echo "$(date '+%Y-%m-%d %H:%M:%S') — ❌ Spam cleanup error" >> "$LOG_FILE"
 fi
 
+# Dashboard generieren
+echo "$(date '+%Y-%m-%d %H:%M:%S') — Generating daily dashboard..." >> "$LOG_FILE"
+python src/reporter.py >> "$LOG_FILE" 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ✅ Dashboard generated" >> "$LOG_FILE"
+else
+    echo "$(date '+%Y-%m-%d %H:%M:%S') — ⚠️  Dashboard generation failed (non-blocking)" >> "$LOG_FILE"
+fi
+
 echo "" >> "$LOG_FILE"
