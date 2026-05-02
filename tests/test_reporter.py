@@ -106,6 +106,7 @@ def test_generate_report_creates_html_file(tmp_path):
     )
 
     assert report_path.exists()
+    assert (reports_dir / "latest.html").exists()
     content = report_path.read_text()
     assert "Gmail Smart Automation" in content
     assert "Chart.js" in content

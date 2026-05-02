@@ -60,6 +60,10 @@ def load_unsubscribe(data_dir: Path = None) -> dict:
 def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
     """Baue HTML-String für das Dashboard."""
     import json as _json
+    import html as _html_lib
+
+    def _esc(s) -> str:
+        return _html_lib.escape(str(s))
 
     label_names = list(today.get("label_counts", {}).keys())
     label_values = list(today.get("label_counts", {}).values())
@@ -81,8 +85,8 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
     # Priority emails HTML rows
     priority_rows = "".join(
         f'<tr class="border-b border-slate-700">'
-        f'<td class="py-2 pr-4 text-amber-400">{e.get("from","")}</td>'
-        f'<td class="py-2 text-slate-300">{e.get("subject","")}</td>'
+        f'<td class="py-2 pr-4 text-amber-400">{_esc(e.get("from",""))}</td>'
+        f'<td class="py-2 text-slate-300">{_esc(e.get("subject",""))}</td>'
         f'</tr>'
         for e in priority_emails
     ) or '<tr><td colspan="2" class="py-3 text-slate-500 italic">Keine Priority-Emails heute</td></tr>'
@@ -91,8 +95,8 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
     calendar_items = "".join(
         f'<div class="flex items-center gap-3 py-2 border-b border-slate-700">'
         f'<span class="text-green-400">📅</span>'
-        f'<span>{e.get("title","")}</span>'
-        f'<span class="text-slate-400 ml-auto">{e.get("date","")} {e.get("time","")}</span>'
+        f'<span>{_esc(e.get("title",""))}</span>'
+        f'<span class="text-slate-400 ml-auto">{_esc(e.get("date",""))} {_esc(e.get("time",""))}</span>'
         f'</div>'
         for e in calendar_events
     ) or '<p class="text-slate-500 italic py-2">Keine Kalender-Events heute</p>'
@@ -102,7 +106,7 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
         unsub_date = unsubscribe.get("date", "")
         candidates_html = "".join(
             f'<div class="flex items-center gap-3 py-2 border-b border-slate-700">'
-            f'<span class="text-slate-300">{c.get("sender","")}</span>'
+            f'<span class="text-slate-300">{_esc(c.get("sender",""))}</span>'
             f'<span class="text-amber-400 ml-auto">{c.get("days_unread", 0)} Tage ungelesen</span>'
             f'</div>'
             for c in unsubscribe["candidates"]
@@ -221,7 +225,7 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
       <div><p class="text-slate-400">SPAM gelöscht</p><p class="text-white font-mono">{spam_deleted}</p></div>
       <div><p class="text-slate-400">Fehler</p><p class="{'text-green-400' if not errors else 'text-amber-400'} font-mono">{len(errors)}</p></div>
     </div>
-    {''.join(f'<p class="text-red-400 text-sm mt-2 font-mono">{e}</p>' for e in errors)}
+    {''.join(f'<p class="text-red-400 text-sm mt-2 font-mono">{_esc(e)}</p>' for e in errors)}
   </div>
 
   <p class="text-center text-slate-600 text-xs mt-8">Generiert: {datetime.now().strftime('%d.%m.%Y %H:%M')} · Gmail Smart Automation</p>
