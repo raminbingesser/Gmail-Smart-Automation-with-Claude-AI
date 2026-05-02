@@ -74,3 +74,19 @@ def test_load_history_ignores_spam_files(tmp_path):
 def test_load_history_empty_when_no_files(tmp_path):
     history = load_history(days=30, data_dir=tmp_path)
     assert history == []
+
+
+def test_load_unsubscribe_returns_none_when_missing(tmp_path):
+    from src.reporter import load_unsubscribe
+    result = load_unsubscribe(data_dir=tmp_path)
+    assert result is None
+
+
+def test_load_unsubscribe_returns_dict_when_present(tmp_path):
+    from src.reporter import load_unsubscribe
+    data = {"date": "2026-05-02", "candidates": [{"sender": "test@example.com", "days_unread": 45}]}
+    (tmp_path / "unsubscribe_latest.json").write_text(__import__("json").dumps(data))
+    result = load_unsubscribe(data_dir=tmp_path)
+    assert result is not None
+    assert result["date"] == "2026-05-02"
+    assert len(result["candidates"]) == 1
