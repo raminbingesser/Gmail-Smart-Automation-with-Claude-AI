@@ -57,7 +57,22 @@ def load_unsubscribe(data_dir: Path = None) -> dict:
         return None
 
 
-def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
+def calculate_total_cost(data_dir: Path = None) -> float:
+    """Summiere api_cost_chf aus allen gespeicherten Snapshots."""
+    target = data_dir or DATA_DIR
+    if not target.exists():
+        return 0.0
+    total = 0.0
+    for f in target.glob("????-??-??.json"):
+        try:
+            data = json.loads(f.read_text())
+            total += data.get("api_cost_chf", 0.0)
+        except (json.JSONDecodeError, OSError):
+            continue
+    return total
+
+
+def _build_html(today: dict, history: list, unsubscribe: dict, total_cost_chf: float = 0.0) -> str:
     """Baue HTML-String für das Dashboard."""
     import json as _json
     import html as _html_lib
@@ -77,6 +92,7 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
     errors = today.get("errors", [])
     spam_deleted = today.get("spam_deleted", 0)
     cost = today.get("api_cost_chf", 0.0)
+    total_cost = total_cost_chf
     runtime = today.get("runtime_seconds", 0.0)
     total = today.get("total_processed", 0)
     report_date = today.get("date", date.today().isoformat())
@@ -165,6 +181,7 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
       <span class="flex items-center gap-2">📧 <strong class="text-white">{total}</strong> Emails verarbeitet</span>
       <span class="flex items-center gap-2">⏱ <strong class="text-white">{runtime:.0f}s</strong> Laufzeit</span>
       <span class="flex items-center gap-2">💰 <strong class="text-white">{cost:.4f} CHF</strong> API-Kosten</span>
+      <span class="flex items-center gap-2">📊 Gesamt: <strong class="text-white">{total_cost:.4f} CHF</strong></span>
       <span class="flex items-center gap-2 {'text-green-400' if not errors else 'text-amber-400'}">{health_icon}</span>
     </div>
   </div>
@@ -219,8 +236,9 @@ def _build_html(today: dict, history: list, unsubscribe: dict) -> str:
   <!-- System Health -->
   <div class="bg-[#1e293b] rounded-2xl p-6 shadow-lg">
     <h2 class="text-lg font-semibold mb-4 text-white">⚙️ System-Gesundheit</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-      <div><p class="text-slate-400">API-Kosten</p><p class="text-white font-mono">{cost:.6f} CHF</p></div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+      <div><p class="text-slate-400">Heute</p><p class="text-white font-mono">{cost:.6f} CHF</p></div>
+      <div><p class="text-slate-400">Gesamt seit Start</p><p class="text-white font-mono">{total_cost:.4f} CHF</p></div>
       <div><p class="text-slate-400">Laufzeit</p><p class="text-white font-mono">{runtime:.1f}s</p></div>
       <div><p class="text-slate-400">SPAM gelöscht</p><p class="text-white font-mono">{spam_deleted}</p></div>
       <div><p class="text-slate-400">Fehler</p><p class="{'text-green-400' if not errors else 'text-amber-400'} font-mono">{len(errors)}</p></div>
@@ -258,6 +276,157 @@ new Chart(document.getElementById('pieChart'), {{
 </html>"""
 
 
+def _build_email_html(today: dict, total_cost_chf: float = 0.0) -> str:
+    """Baue HTML-Email (ohne JS/Charts, inline CSS für Email-Clients)."""
+    import html as _html_lib
+
+    def _esc(s) -> str:
+        return _html_lib.escape(str(s))
+
+    cost = today.get("api_cost_chf", 0.0)
+    total = today.get("total_processed", 0)
+    runtime = today.get("runtime_seconds", 0.0)
+    spam_deleted = today.get("spam_deleted", 0)
+    report_date = today.get("date", date.today().isoformat())
+    errors = today.get("errors", [])
+    priority_emails = today.get("priority_emails", [])
+    calendar_events = today.get("calendar_events", [])
+    label_counts = today.get("label_counts", {})
+    health = "✅ Keine Fehler" if not errors else f"⚠️ {len(errors)} Fehler"
+
+    # Label rows
+    label_rows = "".join(
+        f'<tr><td style="padding:6px 12px;color:#374151;">{_esc(k)}</td>'
+        f'<td style="padding:6px 12px;text-align:right;font-weight:bold;color:#111827;">{v}</td></tr>'
+        for k, v in label_counts.items()
+    )
+
+    # Priority email rows
+    if priority_emails:
+        prio_rows = "".join(
+            f'<tr><td style="padding:6px 12px;color:#d97706;">{_esc(e.get("from",""))}</td>'
+            f'<td style="padding:6px 12px;color:#374151;">{_esc(e.get("subject",""))}</td></tr>'
+            for e in priority_emails
+        )
+    else:
+        prio_rows = '<tr><td colspan="2" style="padding:8px 12px;color:#9ca3af;font-style:italic;">Keine Priority-Emails heute</td></tr>'
+
+    # Calendar rows
+    if calendar_events:
+        cal_rows = "".join(
+            f'<tr><td style="padding:6px 12px;color:#374151;">{_esc(e.get("title",""))}</td>'
+            f'<td style="padding:6px 12px;color:#6b7280;">{_esc(e.get("date",""))} {_esc(e.get("time",""))}</td></tr>'
+            for e in calendar_events
+        )
+    else:
+        cal_rows = '<tr><td colspan="2" style="padding:8px 12px;color:#9ca3af;font-style:italic;">Keine Kalender-Events heute</td></tr>'
+
+    return f"""<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gmail Automation Report {report_date}</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+  <!-- Header -->
+  <div style="background:#0f172a;padding:24px 28px;">
+    <h1 style="margin:0;color:#ffffff;font-size:20px;">Gmail Smart Automation</h1>
+    <p style="margin:4px 0 0;color:#94a3b8;font-size:14px;">Report vom {report_date}</p>
+  </div>
+
+  <!-- Stats Bar -->
+  <div style="display:flex;flex-wrap:wrap;gap:0;background:#1e293b;">
+    <div style="flex:1;min-width:120px;padding:14px 20px;text-align:center;">
+      <p style="margin:0;color:#94a3b8;font-size:11px;text-transform:uppercase;">Emails</p>
+      <p style="margin:4px 0 0;color:#ffffff;font-size:22px;font-weight:bold;">{total}</p>
+    </div>
+    <div style="flex:1;min-width:120px;padding:14px 20px;text-align:center;">
+      <p style="margin:0;color:#94a3b8;font-size:11px;text-transform:uppercase;">Laufzeit</p>
+      <p style="margin:4px 0 0;color:#ffffff;font-size:22px;font-weight:bold;">{runtime:.0f}s</p>
+    </div>
+    <div style="flex:1;min-width:120px;padding:14px 20px;text-align:center;">
+      <p style="margin:0;color:#94a3b8;font-size:11px;text-transform:uppercase;">Heute CHF</p>
+      <p style="margin:4px 0 0;color:#22c55e;font-size:22px;font-weight:bold;">{cost:.4f}</p>
+    </div>
+    <div style="flex:1;min-width:120px;padding:14px 20px;text-align:center;">
+      <p style="margin:0;color:#94a3b8;font-size:11px;text-transform:uppercase;">Gesamt CHF</p>
+      <p style="margin:4px 0 0;color:#22c55e;font-size:22px;font-weight:bold;">{total_cost_chf:.4f}</p>
+    </div>
+  </div>
+
+  <div style="padding:20px 28px;">
+
+    <!-- Label Distribution -->
+    <h2 style="margin:0 0 12px;font-size:15px;color:#111827;">🏷️ Label-Verteilung</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#f9fafb;border-radius:8px;overflow:hidden;">
+      {label_rows}
+    </table>
+
+    <!-- Priority Emails -->
+    <h2 style="margin:0 0 12px;font-size:15px;color:#111827;">⭐ Priority-Emails ({len(priority_emails)})</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#fffbeb;border-radius:8px;overflow:hidden;">
+      {prio_rows}
+    </table>
+
+    <!-- Calendar Events -->
+    <h2 style="margin:0 0 12px;font-size:15px;color:#111827;">📅 Kalender-Events ({len(calendar_events)})</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#f0fdf4;border-radius:8px;overflow:hidden;">
+      {cal_rows}
+    </table>
+
+    <!-- SPAM + Health -->
+    <div style="display:flex;gap:16px;margin-bottom:16px;">
+      <div style="flex:1;background:#fef2f2;border-radius:8px;padding:16px;text-align:center;">
+        <p style="margin:0;color:#6b7280;font-size:12px;">🗑️ SPAM gelöscht</p>
+        <p style="margin:4px 0 0;font-size:28px;font-weight:bold;color:#ef4444;">{spam_deleted}</p>
+      </div>
+      <div style="flex:1;background:#f0fdf4;border-radius:8px;padding:16px;text-align:center;">
+        <p style="margin:0;color:#6b7280;font-size:12px;">System</p>
+        <p style="margin:4px 0 0;font-size:16px;font-weight:bold;color:{'#16a34a' if not errors else '#d97706'};">{health}</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="padding:12px 28px;background:#f9fafb;text-align:center;">
+    <p style="margin:0;color:#9ca3af;font-size:11px;">Gmail Smart Automation · {datetime.now().strftime('%d.%m.%Y %H:%M')}</p>
+  </div>
+</div>
+</body>
+</html>"""
+
+
+def send_report_email(html: str, recipient: str, date_str: str) -> None:
+    """Sende Dashboard-Email via Gmail API."""
+    import base64
+    import os
+    import sys
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    sys.path.insert(0, str(Path(__file__).parent))
+    from gmail_client import GmailClient
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    gmail = GmailClient(
+        credentials_path=os.getenv("GOOGLE_CREDENTIALS_PATH", "credentials/credentials.json"),
+        token_path=os.getenv("GOOGLE_TOKEN_PATH", "credentials/token.json"),
+    )
+    gmail.get_service()
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Gmail Automation Report — {date_str}"
+    msg["From"] = recipient
+    msg["To"] = recipient
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+    gmail.service.users().messages().send(
+        userId="me",
+        body={"raw": raw},
+    ).execute()
+
+
 def generate_report(
     today_date: str = None,
     data_dir: Path = None,
@@ -286,7 +455,8 @@ def generate_report(
     history = load_history(days=30, data_dir=src_dir)
     unsubscribe = load_unsubscribe(data_dir=src_dir)
 
-    html = _build_html(today, history, unsubscribe)
+    total_cost = calculate_total_cost(data_dir=src_dir)
+    html = _build_html(today, history, unsubscribe, total_cost)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path = out_dir / f"{day}.html"
@@ -295,6 +465,10 @@ def generate_report(
     latest_path = out_dir / "latest.html"
     latest_path.write_text(html, encoding="utf-8")
 
+    email_html = _build_email_html(today, total_cost)
+    email_html_path = out_dir / f"{day}-email.html"
+    email_html_path.write_text(email_html, encoding="utf-8")
+
     if open_browser:
         subprocess.run(["open", str(report_path)], check=False)
 
@@ -302,14 +476,32 @@ def generate_report(
 
 
 def main():
-    """CLI-Einstiegspunkt: Dashboard generieren und Browser öffnen."""
+    """CLI-Einstiegspunkt: Dashboard generieren, Browser öffnen, Email senden."""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
     try:
         report_path = generate_report()
         print(f"✅ Dashboard generiert: {report_path}")
     except FileNotFoundError as e:
         print(f"⚠️  Dashboard konnte nicht generiert werden: {e}")
+        return
     except Exception as e:
         print(f"❌ Reporter-Fehler: {e}")
+        return
+
+    # Email senden
+    recipient = os.getenv("EMAIL_RECIPIENT", "r.bingesser@gmail.com")
+    today_str = date.today().isoformat()
+    email_path = REPORTS_DIR / f"{today_str}-email.html"
+    if email_path.exists():
+        try:
+            email_html = email_path.read_text(encoding="utf-8")
+            send_report_email(email_html, recipient, today_str)
+            print(f"📧 Report-Email gesendet an {recipient}")
+        except Exception as e:
+            print(f"⚠️  Email konnte nicht gesendet werden: {e}")
 
 
 if __name__ == "__main__":
