@@ -1,12 +1,17 @@
 """Main: Orchestriere Gmail-Klassifikation."""
 
 import os
+import time
+import sys
 import yaml
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
+sys.path.insert(0, str(Path(__file__).parent))
 from gmail_client import GmailClient
 from classifier import EmailClassifier
 from calendar_client import create_event
+import reporter
 
 
 def load_labels() -> list[str]:
@@ -26,6 +31,12 @@ def main():
     """Lese Emails, klassifiziere, labele."""
     # Load .env
     load_dotenv()
+
+    start_time = time.time()
+    label_counts = {}
+    priority_emails = []
+    calendar_events = []
+    errors = []
 
     # Setup
     gmail = GmailClient(
@@ -62,12 +73,17 @@ def main():
     # Labeln + Feedback
     for result in results:
         email_id = result["email_id"]
+        email_from = next(
+            (e.get("from", "") for e in emails if e["id"] == email_id), ""
+        )
         subject = result["subject"]
         body = result.get("body", "")
         classification = result["classification"]
         label = classification["label"]
         confidence = classification["confidence"]
         reason = classification["reason"]
+
+        label_counts[label] = label_counts.get(label, 0) + 1
 
         print(f"📧 {subject[:50]}")
         print(f"   → Label: '{label}' ({confidence:.0%})")
@@ -84,6 +100,11 @@ def main():
                 if classifier.needs_reply(subject, body):
                     gmail.star_email(email_id)
                     print(f"   ⭐ Braucht Antwort — gestarrt")
+                    priority_emails.append({
+                        "from": email_from,
+                        "subject": subject[:80],
+                        "time": datetime.now().strftime("%H:%M"),
+                    })
 
             # Health → Calendar: Termin extrahieren + in Kalender eintragen
             if label == "Health":
@@ -99,12 +120,36 @@ def main():
                     )
                     if success:
                         print(f"   📅 Termin → Apple Calendar")
+                        calendar_events.append({
+                            "title": appointment.get("titel", subject[:30]),
+                            "date": appointment["datum"],
+                            "time": appointment.get("uhrzeit", ""),
+                        })
                     else:
                         print(f"   ⚠️  Termin konnte nicht hinzugefügt werden")
 
             print()
         except Exception as e:
             print(f"   ❌ Fehler: {e}\n")
+            errors.append(f"{subject[:40]}: {str(e)}")
+
+    # Stats-Snapshot speichern
+    stats = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "timestamp": datetime.now().isoformat(),
+        "total_processed": len(results),
+        "label_counts": label_counts,
+        "priority_emails": priority_emails,
+        "calendar_events": calendar_events,
+        "api_cost_chf": classifier.total_cost_chf(),
+        "runtime_seconds": round(time.time() - start_time, 1),
+        "errors": errors,
+    }
+    try:
+        reporter.save_snapshot(stats)
+        print(f"\n📊 Stats gespeichert ({stats['total_processed']} Emails, {stats['api_cost_chf']:.4f} CHF)")
+    except Exception as e:
+        print(f"⚠️  Stats konnten nicht gespeichert werden: {e}")
 
 
 if __name__ == "__main__":
