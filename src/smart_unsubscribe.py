@@ -1,12 +1,17 @@
 """Smart Unsubscribe: Findet inaktive Newsletter und bietet deabonnieren an."""
 
+import json
 import os
 import re
 import webbrowser
+from pathlib import Path
 from typing import Optional
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from gmail_client import GmailClient
+
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "reports" / "data"
 
 
 def find_unsubscribe_link(headers: list[dict], body: str) -> Optional[str]:
@@ -130,6 +135,22 @@ def main():
     if not candidates:
         print("   ℹ️  Keine Unsubscribe-Links gefunden.")
         return
+
+    # Kandidaten für Dashboard speichern
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        unsub_data = {
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "candidates": [
+                {"sender": sender, "days_unread": 30, "unsubscribe_url": link}
+                for sender, link in candidates
+            ]
+        }
+        (DATA_DIR / "unsubscribe_latest.json").write_text(
+            json.dumps(unsub_data, ensure_ascii=False, indent=2)
+        )
+    except Exception as e:
+        print(f"⚠️  Unsubscribe-Stats konnten nicht gespeichert werden: {e}")
 
     # Interaktive Bestätigung
     response = input(f"   Sollen alle {len(candidates)} deabonniert werden? [j/n]: ")
