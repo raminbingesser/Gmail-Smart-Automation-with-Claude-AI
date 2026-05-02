@@ -16,7 +16,7 @@ labels:
 
   - name: Tax
     description: "Steuererklärung, Steuerbescheinigung, AHV, IV, BVG, Vorsorge, Lohnausweis"
-    keywords: ["steuern", "tax", "steuerbescheinigung", "lohnausweis", "ahv", "iv", "bvg", "vorsorge", "einkommensteuererklärung", "dekl", "eis"]
+    keywords: ["steuern", "tax", "steuerbescheinigung", "lohnausweis", "ahv", "iv", "bvg", "vorsorge", "axa", "generali", "einkommensteuererklärung", "dekl", "eis"]
 
   - name: Health
     description: "Gesundheit, Arztbesuche, Medizin, Zahnärzte, Kliniken, Rezepte"
