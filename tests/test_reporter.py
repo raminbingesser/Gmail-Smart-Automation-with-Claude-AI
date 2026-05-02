@@ -90,3 +90,24 @@ def test_load_unsubscribe_returns_dict_when_present(tmp_path):
     assert result is not None
     assert result["date"] == "2026-05-02"
     assert len(result["candidates"]) == 1
+
+
+def test_generate_report_creates_html_file(tmp_path):
+    from src.reporter import generate_report, save_snapshot, save_spam_snapshot
+    reports_dir = tmp_path / "reports"
+    save_snapshot(SAMPLE_STATS, data_dir=tmp_path)
+    save_spam_snapshot(12, data_dir=tmp_path, today="2026-05-02")
+
+    report_path = generate_report(
+        today_date="2026-05-02",
+        data_dir=tmp_path,
+        reports_dir=reports_dir,
+        open_browser=False,
+    )
+
+    assert report_path.exists()
+    content = report_path.read_text()
+    assert "Gmail Smart Automation" in content
+    assert "Chart.js" in content
+    assert "23" in content  # total_processed
+    assert "Zahnarzt" in content  # calendar event
