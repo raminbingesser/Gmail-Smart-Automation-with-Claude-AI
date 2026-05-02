@@ -174,6 +174,27 @@ class GmailClient:
 
         return True
 
+    def delete_label_definition(self, label_name: str) -> bool:
+        """Löscht ein Label komplett (auch die Definition in Gmail)."""
+        if not self.service:
+            self.get_service()
+
+        labels_result = self.service.users().labels().list(userId="me").execute()
+        labels = labels_result.get("labels", [])
+        label_id = next((l["id"] for l in labels if l["name"] == label_name), None)
+
+        if not label_id:
+            print(f"   ℹ️  Label '{label_name}' nicht gefunden")
+            return False
+
+        try:
+            self.service.users().labels().delete(userId="me", id=label_id).execute()
+            print(f"   ✅ Label '{label_name}' gelöscht")
+            return True
+        except Exception as e:
+            print(f"   ⚠️  Fehler beim Löschen: {e}")
+            return False
+
     def remove_label_by_name(self, label_name: str) -> int:
         """Entfernt ein Label von ALLEN Mails, die es haben.
 
