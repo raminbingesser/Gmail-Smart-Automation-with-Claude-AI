@@ -103,3 +103,22 @@ def test_batch_classify():
     assert len(results) == 2
     assert results[0]["email_id"] == "1"
     assert results[1]["email_id"] == "2"
+
+
+def test_total_cost_chf_accumulates(classifier):
+    """Token-Tracking akkumuliert korrekt über mehrere Calls."""
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"label":"Newsletter","confidence":0.9,"reason":"Test"}')]
+    mock_response.usage.input_tokens = 100
+    mock_response.usage.output_tokens = 40
+    classifier.client.messages.create.return_value = mock_response
+
+    classifier.classify_email("Test", "Body", ["Newsletter"])
+    classifier.classify_email("Test2", "Body2", ["Newsletter"])
+
+    assert classifier._total_input_tokens == 200
+    assert classifier._total_output_tokens == 80
+    cost = classifier.total_cost_chf()
+    assert cost > 0
+    expected = round(200 * 0.80 * 0.90 / 1_000_000 + 80 * 4.00 * 0.90 / 1_000_000, 10)
+    assert round(cost, 10) == expected
