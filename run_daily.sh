@@ -14,6 +14,10 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') — Starting email classification" >> "$LOG_F
 
 # Aktiviere venv und starte Skript
 cd "$PROJECT_DIR" || exit 1
+
+# Auto-Update: neueste Änderungen von GitHub holen
+git pull --quiet origin main >> "$LOG_FILE" 2>&1
+
 source .venv/bin/activate
 
 python src/main.py >> "$LOG_FILE" 2>&1

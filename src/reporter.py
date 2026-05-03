@@ -396,6 +396,24 @@ def _build_email_html(today: dict, total_cost_chf: float = 0.0) -> str:
 </html>"""
 
 
+def send_report_email_smtp(html: str, sender_email: str, sender_password: str, recipient: str, date_str: str) -> None:
+    """Sende Dashboard-Email via Outlook SMTP (für Hotmail-Nutzer)."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Email Automation Report — {date_str}"
+    msg["From"] = sender_email
+    msg["To"] = recipient
+    msg.attach(MIMEText(html, "html", "utf-8"))
+
+    with smtplib.SMTP("smtp-mail.outlook.com", 587) as smtp:
+        smtp.starttls()
+        smtp.login(sender_email, sender_password)
+        smtp.sendmail(sender_email, recipient, msg.as_string())
+
+
 def send_report_email(html: str, recipient: str, date_str: str) -> None:
     """Sende Dashboard-Email via Gmail API."""
     import base64
