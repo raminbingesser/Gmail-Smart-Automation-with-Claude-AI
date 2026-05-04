@@ -1,12 +1,21 @@
 #!/bin/bash
 # Tägliche Email-Klassifikation
-# Wird täglich um 8 Uhr morgens ausgeführt (via launchd)
+# Läuft stündlich via launchd — Lock-File verhindert Doppelausführung pro Tag
 
 PROJECT_DIR="/Users/raminbingesser/Projects/EmailAutomationPrivat"
 LOG_FILE="$PROJECT_DIR/logs/automation.log"
+LOCK_FILE="$PROJECT_DIR/logs/.daily_lock_$(date +%Y-%m-%d)"
 
 # Logs-Ordner erstellen falls nicht vorhanden
 mkdir -p "$PROJECT_DIR/logs"
+
+# Heute schon gelaufen? Dann still beenden.
+if [ -f "$LOCK_FILE" ]; then
+    exit 0
+fi
+
+# Lock-File sofort setzen (verhindert parallele Starts)
+touch "$LOCK_FILE"
 
 # Timestamp für Logging
 echo "================================" >> "$LOG_FILE"
